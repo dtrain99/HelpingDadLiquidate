@@ -12,6 +12,7 @@ permissions:
 env:
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   REGION: us-central1
+  FUNCTIONS: health auth   # one Cloud Run function per entry point in functions/main.py
 
 jobs:
   deploy:
@@ -29,21 +30,28 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Deploy health function
+      - name: Deploy functions
+        env:
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          SHEET_ID: ${{ vars.SHEET_ID }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
         run: |
-          gcloud functions deploy health \
-            --gen2 \
-            --project="$PROJECT_ID" \
-            --region="$REGION" \
-            --runtime=python312 \
-            --source=functions/health \
-            --entry-point=health \
-            --trigger-http \
-            --allow-unauthenticated \
-            --max-instances=2 \
-            --service-account="${{ vars.RUNTIME_SA }}" \
-            --set-env-vars="APP_VERSION=${GITHUB_SHA::7}" \
-            --quiet
+          for FN in $FUNCTIONS; do
+            echo "Deploying $FN..."
+            gcloud functions deploy "$FN" \
+              --gen2 \
+              --project="$PROJECT_ID" \
+              --region="$REGION" \
+              --runtime=python312 \
+              --source=functions \
+              --entry-point="$FN" \
+              --trigger-http \
+              --allow-unauthenticated \
+              --max-instances=2 \
+              --service-account="${{ vars.RUNTIME_SA }}" \
+              --set-env-vars="APP_VERSION=${GITHUB_SHA::7},GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,SHEET_ID=$SHEET_ID,SESSION_SECRET=$SESSION_SECRET" \
+              --quiet
+          done
 
       - uses: actions/setup-node@v4
         with:

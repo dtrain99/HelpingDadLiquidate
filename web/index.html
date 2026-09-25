@@ -10,9 +10,25 @@
   <main>
     <div class="tag" aria-hidden="true"></div>
     <h1>Dad's Things</h1>
-    <p>Photograph, price, and track everything we're selling.</p>
-    <p id="status" class="status">Checking the server…</p>
+
+    <section id="loading">
+      <p>Loading…</p>
+    </section>
+
+    <section id="signed-out" hidden>
+      <p>Photograph, price, and track everything we're selling. Sign in with the Google account that's on the family list.</p>
+      <div id="google-button"></div>
+      <p id="message" class="message" role="status"></p>
+    </section>
+
+    <section id="signed-in" hidden>
+      <p class="greeting">Signed in as <strong id="user-name"></strong></p>
+      <p class="email" id="user-email"></p>
+      <p>Adding items is coming in the next update.</p>
+      <button id="sign-out" type="button">Sign out</button>
+    </section>
   </main>
+  <footer><span id="version"></span> · <a href="/privacy.html">Privacy</a></footer>
   <script src="app.js"></script>
 </body>
 </html>

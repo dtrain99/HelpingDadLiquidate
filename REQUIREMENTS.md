@@ -21,9 +21,11 @@ conversations can refer to it. Status: Done, In progress, Planned, or Later.
 
 | ID | Requirement | How we validate | Status |
 |---|---|---|---|
+| F-1.0 | Every push to `main` deploys the app automatically, and the page shows the deployed version. | Page footer shows the latest commit code. | Done |
 | F-1.1 | The app runs in a phone browser and can be added to the home screen. | Open on iPhone and Android; add to home screen; it launches. | Planned |
-| F-1.2 | Family members sign in with their Google account. | Sign in on a phone and a laptop. | Planned |
-| F-1.3 | Only people listed in the Master Inventory "Family" tab can use the app. | A listed email gets in; an unlisted one sees an access message. | Planned |
+| F-1.2 | Family members sign in with their Google account, stay signed in for 30 days, and can sign out. | Sign in on a phone and a laptop; reload and remain signed in; sign out. | In progress |
+| F-1.3 | Only people listed in the Master Inventory "Family" tab can use the app. Removing someone takes effect within a minute, even if they're signed in. | A listed email gets in; an unlisted one sees an access message; removing a signed-in person signs them out on reload. | In progress |
+| F-1.7 | The app has a privacy page, linked from the main page, describing what's collected and how it's used. Required to publish the Google sign-in app. | `/privacy.html` loads and is linked from the footer. | In progress |
 | F-1.4 | A user can take a photo of an item with the phone camera and upload it. | Photo appears in the Cloud Storage bucket. | Planned |
 | F-1.5 | Saving an item adds a row to the Items tab of the Master Inventory with a visible photo thumbnail. | Row appears with thumbnail, name, notes, who added it, and date. | Planned |
 | F-1.6 | Each item has a status: Available, Pending, or Sold. | Status column present; defaults to Available. | Planned |
@@ -60,15 +62,18 @@ conversations can refer to it. Status: Done, In progress, Planned, or Later.
 | ID | Decision |
 |---|---|
 | T-1 | Front end: plain HTML, CSS, and JavaScript with no build step, hosted on Firebase Hosting. |
-| T-2 | Backend: Python Cloud Run functions in `us-central1`, one per module, reached at `/api/<name>` via Firebase Hosting rewrites (same domain as the web app). |
-| T-3 | Session cookie is named `__session` (the only cookie Firebase Hosting forwards), HttpOnly, Secure, and signed. |
-| T-4 | Sign-in: Google Sign-In (OpenID Connect); the backend verifies the ID token and checks the Family tab. |
+| T-2 | Backend: Python Cloud Run functions in `us-central1`, one per module, reached at `/api/<name>` via Firebase Hosting rewrites (same domain as the web app). All functions share one source folder (`functions/`) with a separate entry point each, so shared modules are written once. |
+| T-3 | Session cookie is named `__session` (the only cookie Firebase Hosting forwards), HttpOnly, Secure, SameSite=Lax, signed, and valid for 30 days. |
+| T-4 | Sign-in: the Sign in with Google button (Google Identity Services) returns an ID token, which the browser posts to `/api/auth/login`; the backend verifies it (signature, audience, expiry, verified email) and checks the Family tab. |
 | T-5 | The backend accesses the sheet and storage as a dedicated runtime service account; users never grant Drive access. |
 | T-6 | Photos are stored in a Cloud Storage bucket, publicly readable under random, unguessable file names, so `=IMAGE()` thumbnails work in the sheet. |
 | T-7 | The Master Inventory Google Sheet is the source of truth. Tabs: Items, Listings, Family. |
 | T-8 | GitHub Actions deploys using Workload Identity Federation; no service account keys are stored anywhere. |
 | T-9 | Cost guards: function max instances capped, old build images cleaned up, and a billing budget alert set. Endpoints that call paid APIs require a signed-in family member. |
 | T-10 | All code and documentation live in https://github.com/dtrain99/HelpingDadLiquidate. |
+| T-11 | The cookie-signing key is a GitHub Actions secret (`SESSION_SECRET`) passed to the functions as an environment variable. Changing it signs everyone out. (Alternative considered: Google Secret Manager.) |
+| T-13 | The Google sign-in app is published (External, production) with homepage `https://helping-dad-liquidate.web.app` and privacy policy `https://helping-dad-liquidate.web.app/privacy.html`, so anyone on the Family tab can sign in without also being a test user. |
+| T-12 | Configuration lives in GitHub repository variables: `GCP_PROJECT_ID`, `WIF_PROVIDER`, `DEPLOYER_SA`, `RUNTIME_SA`, `GOOGLE_CLIENT_ID`, `SHEET_ID`. |
 
 ## Constraints and known limitations
 

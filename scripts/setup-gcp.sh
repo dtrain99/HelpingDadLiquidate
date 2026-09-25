@@ -18,11 +18,17 @@ gcloud services enable \
   cloudfunctions.googleapis.com run.googleapis.com cloudbuild.googleapis.com \
   artifactregistry.googleapis.com iam.googleapis.com iamcredentials.googleapis.com \
   sts.googleapis.com firebasehosting.googleapis.com serviceusage.googleapis.com \
-  cloudresourcemanager.googleapis.com
+  cloudresourcemanager.googleapis.com sheets.googleapis.com
 
 echo "Creating service accounts..."
 gcloud iam service-accounts create deployer --display-name="GitHub deployer" || true
 gcloud iam service-accounts create app-runtime --display-name="App runtime" || true
+
+echo "Waiting for the new service accounts to be ready..."
+for SA in "$DEPLOYER" "$RUNTIME"; do
+  until gcloud iam service-accounts describe "$SA" >/dev/null 2>&1; do sleep 5; done
+done
+sleep 15   # IAM needs a little longer than describe to see new accounts
 
 echo "Granting deployer roles..."
 for ROLE in roles/cloudfunctions.developer roles/run.admin roles/iam.serviceAccountUser \
