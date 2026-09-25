@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "public": "web",
+    "ignore": ["**/.*"],
+    "rewrites": [
+      { "source": "/api/health", "run": { "serviceId": "health", "region": "us-central1" } }
+    ],
+    "headers": [
+      { "source": "**", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+    ]
+  }
+}

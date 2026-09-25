@@ -1,0 +1,53 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # required for keyless (Workload Identity Federation) auth
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: us-central1
+
+jobs:
+  deploy:
+    # Skips until the GitHub repository variables from setup-gcp.sh are added
+    if: vars.GCP_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy health function
+        run: |
+          gcloud functions deploy health \
+            --gen2 \
+            --project="$PROJECT_ID" \
+            --region="$REGION" \
+            --runtime=python312 \
+            --source=functions/health \
+            --entry-point=health \
+            --trigger-http \
+            --allow-unauthenticated \
+            --max-instances=2 \
+            --service-account="${{ vars.RUNTIME_SA }}" \
+            --set-env-vars="APP_VERSION=${GITHUB_SHA::7}" \
+            --quiet
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deploy web app
+        run: npx --yes firebase-tools deploy --only hosting --project "$PROJECT_ID" --non-interactive
